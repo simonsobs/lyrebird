@@ -645,7 +645,7 @@ if __name__=='__main__':
 
         pipe.Run()
     else:
-        pipe.Add(SquidDisplay)
+        #pipe.Add(SquidDisplay)
 
         try:
             pipe.Run()

@@ -1,5 +1,5 @@
 import argparse, json, os
-import config_constructor as CC
+from . import config_constructor as CC
 import numpy as np
 from operator import itemgetter, attrgetter
 from spt3g import core
@@ -378,7 +378,7 @@ def generate_dfmux_lyrebird_config(fn,
                    )
     #import pdb; pdb.set_trace()
     addDfmuxStreamer(config_dic, "dfmux_streamer", board_ids, 
-                     bolo_list = filter(lambda x: x, wiring_map.keys()),
+                     bolo_list = list(filter(lambda x: x, wiring_map.keys())),
                      sender_hostname = hk_hostname,
                      sender_port = port,
                      hk_hostname = hk_hostname,
