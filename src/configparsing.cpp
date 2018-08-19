@@ -44,65 +44,94 @@ datastreamer_desc parse_datastreamer_desc(Json::Value & dsjson){
   return dd;
 }
 
-void parse_vis_elem_desc(Json::Value &v, vis_elem_repr &vis_elem,
+bool parse_float_if_valid(float &dest, Json::Value &parent, string key, bool required)
+{
+    if (!parent.isMember(key)) {
+        if (required)
+            log_fatal((key + " not found in visual_element\n").c_str());
+        return false;
+    }
+    if (!parent[key].isNumeric()) {
+        if (required)
+            log_fatal((key + " valid numeric in visual_element\n").c_str());
+        return false;
+    }
+    dest = parent[key].asFloat();
+    return true;
+}
+
+bool parse_int_if_valid(int &dest, Json::Value &parent, string key, bool required)
+{
+    if (!parent.isMember(key)) {
+        if (required)
+            log_fatal((key + " not found in visual_element\n").c_str());
+        return false;
+    }
+    if (!parent[key].isInt()) {
+        if (required)
+            log_fatal((key + " valid int in visual_element\n").c_str());
+        return false;
+    }
+    dest = parent[key].asInt();
+    return true;
+}
+
+bool parse_string_if_valid(string &dest, Json::Value &parent, string key, bool required)
+{
+    if (!parent.isMember(key)) {
+        if (required)
+            log_fatal((key + " not found in visual_element\n").c_str());
+        return false;
+    }
+    dest = parent[key].asString();
+    return true;
+}
+
+
+void parse_vis_elem_desc(Json::Value &v, vis_elem_repr &vis_elem, bool strict,
+                         map<string, vis_elem_repr> &vis_templates,
                          vector<string> &full_svg_paths, vector<string> &full_svg_ids,
                          int &num_layers)
 {
-    if (!v.isMember("x_center")  ) log_fatal("x_center not found  in visual_element\n");
-    if (!v.isMember("y_center") ) log_fatal("y_center not found  in visual_element\n");
-    if (!v.isMember("x_scale")  ) log_fatal("x_scale not found  in visual_element\n");
-    if (!v.isMember("y_scale")  ) log_fatal("y_scale not found  in visual_element\n");
-    if (!v.isMember("rotation") ) log_fatal("rotation not found  in visual_element\n");
-    if (!v.isMember("layer")  ) log_fatal("layer not found  in visual_element\n");
-    if ( !v["x_center"].isNumeric() ) log_fatal("x_center  not valid in visual_element\n");
-    if ( !v["y_center"].isNumeric() ) log_fatal("y_center  not valid in visual_element\n");
-    if ( !v["x_scale"].isNumeric() ) log_fatal("x_scale  not valid in visual_element\n");
-    if ( !v["y_scale"].isNumeric() ) log_fatal("y_scale  not valid in visual_element\n");
-    if ( !v["rotation"].isNumeric() ) log_fatal("rotation  not valid in visual_element\n");
-    if ( !v["layer"].isInt() ) log_fatal("layer  not valid in visual_element\n");
-		  
-		  
-    if (!v.isMember("svg_id") ) log_fatal("svg_id not found  in visual_element\n");
-    if (!v.isMember("svg_path") ) log_fatal("svg_path not found  in visual_element\n");
-		  
-    if (!v.isMember("highlight_svg_id") ) log_fatal("highlight_svg_id not found  in visual_element\n");
-    if (!v.isMember("highlight_svg_path") ) log_fatal("highlight_svg_path not found  in visual_element\n");
-		  
-    if (!v.isMember("labels") ) log_fatal("labels not found  in visual_element\n");
-    if (!v.isMember("equations") ) log_fatal("equations not found  in visual_element\n");
-    if (!v.isMember("group") ) log_fatal("group not found  in visual_element\n");
-    if (!v.isMember("labelled_data") ) log_fatal("labelled_data not found  in visual_element\n");
+    // Load a template starting point?
+    if (v.isMember("template")) {
+        string t_name = v["template"].asString();
+        vis_elem = vis_templates[t_name];
+    }
+    
+    parse_float_if_valid(vis_elem.x_center, v, "x_center", strict);
+    parse_float_if_valid(vis_elem.y_center, v, "y_center", strict);
+    parse_float_if_valid(vis_elem.x_scale , v, "x_scale", strict);
+    parse_float_if_valid(vis_elem.y_scale , v, "y_scale", strict);
+    parse_float_if_valid(vis_elem.rotation , v, "rotation", strict);
 
-    //parse geometric data
-    vis_elem.x_center = v["x_center"].asFloat();
-    vis_elem.y_center = v["y_center"].asFloat();
-    vis_elem.x_scale = v["x_scale"].asFloat();
-    vis_elem.y_scale = v["y_scale"].asFloat();
-    vis_elem.rotation = v["rotation"].asFloat();
-    vis_elem.layer = v["layer"].asInt();
-		  
-    if (vis_elem.layer + 1 > num_layers){
-        num_layers = vis_elem.layer + 1;
+
+    if (parse_int_if_valid(vis_elem.layer , v, "layer", strict)) {
+        if (vis_elem.layer + 1 > num_layers) {
+            num_layers = vis_elem.layer + 1;
+        }
     }
 
-    //parse the visual elements
-    vis_elem.geo_id = v["svg_id"].asString();
-    vis_elem.svg_path = v["svg_path"].asString();
-		  
-    vis_elem.highlight_geo_id = v["highlight_svg_id"].asString();
-    vis_elem.highlight_svg_path = v["highlight_svg_path"].asString();
-		  
-    string svg_id = v["svg_id"].asString();
-    string svg_path= v["svg_path"].asString();
-    full_svg_ids.push_back(svg_id);
-    full_svg_paths.push_back(svg_path);
-		  
-    svg_id = v["highlight_svg_id"].asString();
-    svg_path= v["highlight_svg_path"].asString();
-    full_svg_ids.push_back(svg_id);
-    full_svg_paths.push_back(svg_path);
+    if (parse_string_if_valid(vis_elem.geo_id, v, "svg_id", strict) &&
+        parse_string_if_valid(vis_elem.svg_path, v, "svg_path", strict)) {
+        full_svg_ids.push_back(vis_elem.geo_id);
+        full_svg_paths.push_back(vis_elem.svg_path);
+    }
 
-    log_trace("labels individual");
+    if (parse_string_if_valid(vis_elem.highlight_geo_id, v, "highlight_svg_id", strict) &&
+        parse_string_if_valid(vis_elem.highlight_svg_path, v, "highlight_svg_path", strict)) {
+        full_svg_ids.push_back(vis_elem.highlight_geo_id);
+        full_svg_paths.push_back(vis_elem.highlight_svg_path);
+    }
+
+    if (strict) {
+        if (!v.isMember("labels") ) log_fatal("labels not found  in visual_element\n");
+        if (!v.isMember("equations") ) log_fatal("equations not found  in visual_element\n");
+        if (!v.isMember("group") ) log_fatal("group not found  in visual_element\n");
+        if (!v.isMember("labelled_data") ) log_fatal("labelled_data not found  in visual_element\n");
+    }
+
+    log_trace("laebls individual");
     for (unsigned int j=0; j< v["labels"].size(); j++){
         vis_elem.labels.push_back(v["labels"][j].asString());
     }
@@ -321,6 +350,25 @@ void parse_config_file(string in_file,
   vector<string> full_svg_paths;
   vector<string> full_svg_ids;
 
+  map<string, vis_elem_repr> vis_templates;
+
+  // Load visual element templates, if any.
+  if (root.isMember("visual_element_templates")){
+	  log_trace("parsing visual_element_templates");
+
+	  Json::Value vplates_JSON = root["visual_element_templates"];
+	  for (int i=0; i < (int)vplates_JSON.size(); ++i) {
+              vis_elem_repr vplate;
+              Json::Value v = vplates_JSON[i];
+              string vname = v["name"].asString();
+              if (vis_templates.count(vname) > 0)
+                  log_fatal(("Multiple definitions of visual_element_template " + vname).c_str());
+              parse_vis_elem_desc(v, vplate, false,
+                                  vis_templates, full_svg_paths, full_svg_ids, num_layers);
+              vis_templates[vname] = vplate;
+	  }
+  }
+  
   // Load fully defined visual elements.
   if (!root.isMember("visual_elements")){
 	  log_warn("visual_elements needs to be in config file");
@@ -338,8 +386,8 @@ void parse_config_file(string in_file,
 	  for (int i=0; i < n_vis_elems; i++){
 		  log_trace("individual");
 		  Json::Value v = visElemsJSON[i];
-                  parse_vis_elem_desc(v, vis_elems[i],
-                                      full_svg_paths, full_svg_ids, num_layers);
+                  parse_vis_elem_desc(v, vis_elems[i], false,
+                                      vis_templates, full_svg_paths, full_svg_ids, num_layers);
 	  }
   }
 
