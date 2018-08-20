@@ -234,9 +234,8 @@ int main(int argc, char * args[])
   size_t min_max_update_interval;
 
   vector<vis_elem_repr> vis_elems;
-  vector<string> svg_paths;
-  vector<string> svg_ids;
-
+  vector<pair<string,string>> svgs;
+  
   vector<string> displayed_eq_labels;
 
   std::vector<std::string> displayed_global_equations;
@@ -252,7 +251,7 @@ int main(int argc, char * args[])
 
   //parse the config file
   parse_config_file(config_file.c_str(), dataval_descs, datastream_descs, eq_descs, 
-		    vis_elems, svg_paths, svg_ids,
+		    vis_elems, svgs,
 		    displayed_global_equations, modifiable_data_vals,
 		    command_lst, command_label,
 		    win_x_size, win_y_size, sub_sampling, 
@@ -348,9 +347,8 @@ int main(int argc, char * args[])
   SimpleRen sren;
   log_debug("loading geometry");
   //load our geometry
-  for (size_t i=0; i < svg_paths.size(); i++){
-   sren.load_svg_file(svg_ids[i], svg_paths[i]);
-  }
+  for (auto svg: svgs)
+      sren.load_svg_file(svg.first, svg.second);
 
   log_debug("adding equations");  
   EquationMap equation_map(eq_descs.size()+1, &data_vals);
@@ -389,9 +387,8 @@ int main(int argc, char * args[])
 
   log_debug("setting up highlighter");  
   Highlighter highlight(info_bar, &visual_elements, max_num_plotted);
-  for (size_t i=0; i < svg_paths.size(); i++){
-    highlight.add_shape_definition(svg_ids[i], svg_paths[i]);
-  }
+  for (auto svg: svgs)
+      highlight.add_shape_definition(svg.first, svg.second);
 
   for (size_t i=0; i < visual_elements.size(); i++){
     highlight.add_defined_shape( visual_elements[i]->get_geo_id(), 

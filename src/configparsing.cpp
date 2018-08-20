@@ -90,7 +90,6 @@ bool parse_string_if_valid(string &dest, Json::Value &parent, string key, bool r
 
 void parse_vis_elem_desc(Json::Value &v, vis_elem_repr &vis_elem, bool strict,
                          map<string, vis_elem_repr> &vis_templates,
-                         vector<string> &full_svg_paths, vector<string> &full_svg_ids,
                          int &num_layers)
 {
     // Load a template starting point?
@@ -114,14 +113,10 @@ void parse_vis_elem_desc(Json::Value &v, vis_elem_repr &vis_elem, bool strict,
 
     if (parse_string_if_valid(vis_elem.geo_id, v, "svg_id", strict) &&
         parse_string_if_valid(vis_elem.svg_path, v, "svg_path", strict)) {
-        full_svg_ids.push_back(vis_elem.geo_id);
-        full_svg_paths.push_back(vis_elem.svg_path);
     }
 
     if (parse_string_if_valid(vis_elem.highlight_geo_id, v, "highlight_svg_id", strict) &&
         parse_string_if_valid(vis_elem.highlight_svg_path, v, "highlight_svg_path", strict)) {
-        full_svg_ids.push_back(vis_elem.highlight_geo_id);
-        full_svg_paths.push_back(vis_elem.highlight_svg_path);
     }
 
     if (strict) {
@@ -162,8 +157,7 @@ void parse_config_file(string in_file,
 		       vector<datastreamer_desc> & datastream_descs,
 		       vector<equation_desc> & equation_descs,
 		       vector<vis_elem_repr> & vis_elems,
-		       vector<string> & svg_paths,
-		       vector<string> & svg_ids,
+		       vector<pair<string,string>> & svgs,
 
 		       std::vector<std::string> & displayed_global_equations,
 		       std::vector<std::string> & modifiable_data_vals,
@@ -347,9 +341,6 @@ void parse_config_file(string in_file,
   //Parse the geometry description //
   ///////////////////////////////////
 
-  vector<string> full_svg_paths;
-  vector<string> full_svg_ids;
-
   map<string, vis_elem_repr> vis_templates;
 
   // Load visual element templates, if any.
@@ -364,7 +355,7 @@ void parse_config_file(string in_file,
               if (vis_templates.count(vname) > 0)
                   log_fatal(("Multiple definitions of visual_element_template " + vname).c_str());
               parse_vis_elem_desc(v, vplate, false,
-                                  vis_templates, full_svg_paths, full_svg_ids, num_layers);
+                                  vis_templates, num_layers);
               vis_templates[vname] = vplate;
 	  }
   }
@@ -387,23 +378,22 @@ void parse_config_file(string in_file,
 		  log_trace("individual");
 		  Json::Value v = visElemsJSON[i];
                   parse_vis_elem_desc(v, vis_elems[i], false,
-                                      vis_templates, full_svg_paths, full_svg_ids, num_layers);
+                                      vis_templates, num_layers);
 	  }
   }
 
-  // Reduce the svg ids to be lists of unique values.
-  for (unsigned int i=0; i < full_svg_ids.size(); i++){
-      bool is_unique = true;
-      for (unsigned int j=0; j < svg_ids.size(); j++)
-          if (full_svg_ids[i] == svg_ids[j]){
-              is_unique = false;
+  // Scan all requested svgs and create a single list of files to load.
+  for (auto v: vis_elems) {
+      bool is_new = true;
+      for (auto svg: svgs) {
+          if (svg.first == v.geo_id) {
+              is_new = false;
               break;
           }
-      if (is_unique){
-          svg_ids.push_back(full_svg_ids[i]);
-          svg_paths.push_back(full_svg_paths[i]);
+      }
+      if (is_new) {
+          svgs.push_back(make_pair(v.geo_id,v.svg_path));
       }
   }
-  
 
 }

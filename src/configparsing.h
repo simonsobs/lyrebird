@@ -15,8 +15,7 @@ void parse_config_file(std::string in_file,
 
 		       std::vector<vis_elem_repr> & vis_elems,
 
-		       std::vector<std::string> & svg_paths,
-		       std::vector<std::string> & svg_ids,
+		       std::vector<std::pair<std::string,std::string>> & svgs,
 
 		       std::vector<std::string> & displayed_global_equations,
 		       std::vector<std::string> & modifiable_data_vals,
