@@ -14,7 +14,8 @@ void parse_config_file(std::string in_file,
 		       std::vector<equation_desc> & equation_descs,
 
 		       std::vector<vis_elem_repr> & vis_elems,
-
+                       std::map<std::string, vis_elem_repr> & vis_templates,
+                       
 		       std::vector<std::pair<std::string,std::string>> & svgs,
 
 		       std::vector<std::string> & displayed_global_equations,

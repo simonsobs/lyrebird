@@ -157,6 +157,7 @@ void parse_config_file(string in_file,
 		       vector<datastreamer_desc> & datastream_descs,
 		       vector<equation_desc> & equation_descs,
 		       vector<vis_elem_repr> & vis_elems,
+                       map<string, vis_elem_repr> & vis_templates,
 		       vector<pair<string,string>> & svgs,
 
 		       std::vector<std::string> & displayed_global_equations,
@@ -341,8 +342,6 @@ void parse_config_file(string in_file,
   //Parse the geometry description //
   ///////////////////////////////////
 
-  map<string, vis_elem_repr> vis_templates;
-
   // Load visual element templates, if any.
   if (root.isMember("visual_element_templates")){
 	  log_trace("parsing visual_element_templates");
@@ -382,18 +381,15 @@ void parse_config_file(string in_file,
 	  }
   }
 
-  // Scan all requested svgs and create a single list of files to load.
-  for (auto v: vis_elems) {
-      bool is_new = true;
-      for (auto svg: svgs) {
-          if (svg.first == v.geo_id) {
-              is_new = false;
-              break;
-          }
-      }
-      if (is_new) {
-          svgs.push_back(make_pair(v.geo_id,v.svg_path));
-      }
+  // Make sure all svgs in templates and elements are registered.  Do
+  // not worry about uniqueness; we'll ignore duplicates on load.
+  for (auto kv: vis_templates) {
+      vis_elem_repr &v = kv.second;
+      svgs.push_back(make_pair(v.geo_id, v.svg_path));
+      svgs.push_back(make_pair(v.highlight_geo_id, v.highlight_svg_path));
   }
-
+  for (auto v: vis_elems) {
+      svgs.push_back(make_pair(v.geo_id, v.svg_path));
+      svgs.push_back(make_pair(v.highlight_geo_id, v.highlight_svg_path));
+  }
 }

@@ -48,6 +48,9 @@ void Highlighter::add_shape_definition(std::string id, std::string svg_path){
 		      std::vector< glm::vec4 > & polygon_colors
 		      );
    **/
+        // Ignore duplicates.
+	if ( shape_polys_.find(id) != shape_polys_.end())
+            return;
 	std::vector<std::vector<glm::vec2> > polygons;
 	std::vector< glm::vec4 > polygon_colors;
 	con_svg_to_polys(svg_path, .1, polygons, polygon_colors);

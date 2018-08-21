@@ -492,6 +492,10 @@ int SimpleRen::get_vertex_index(vector<GLfloat> vertex_positions,
 
 
 int SimpleRen::load_svg_file(std::string id, std::string path){
+  // Disregard any ids that are already loaded.
+  for (auto _id : geo_ids)
+      if (_id == id)
+          return 1;
   std::vector < glm::vec2 > out_vertices;
   std::vector < glm::vec2 > out_uvs;
   std::vector < glm::vec4 > out_color;

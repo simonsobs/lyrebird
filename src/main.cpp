@@ -234,6 +234,7 @@ int main(int argc, char * args[])
   size_t min_max_update_interval;
 
   vector<vis_elem_repr> vis_elems;
+  std::map<string, vis_elem_repr> vis_templates;
   vector<pair<string,string>> svgs;
   
   vector<string> displayed_eq_labels;
@@ -251,7 +252,7 @@ int main(int argc, char * args[])
 
   //parse the config file
   parse_config_file(config_file.c_str(), dataval_descs, datastream_descs, eq_descs, 
-		    vis_elems, svgs,
+		    vis_elems, vis_templates, svgs,
 		    displayed_global_equations, modifiable_data_vals,
 		    command_lst, command_label,
 		    win_x_size, win_y_size, sub_sampling, 
@@ -284,11 +285,18 @@ int main(int argc, char * args[])
 	  if (ds_tmp == NULL) print_and_exit("data streamer type not recognized");
 	  data_streamers.push_back(ds_tmp);
   }
-  
+
+  // Give each streamer a chance to dynamically add data_vals, equations, visual_elements.
+  for (auto ds : data_streamers) {
+      int chan_count = ds->configure_datavals(eq_descs, vis_elems, vis_templates);
+      data_vals.register_data_source(chan_count);
+  }
+
   data_vals.initialize();
 
+  // Register the non-datastreamed datavals.
   for (size_t i=0; i < dataval_descs.size(); i++){
-	  printf("adding dataval_descs[i].init_val %f\n", dataval_descs[i].init_val);
+      printf("adding dataval_descs[%i].init_val %f\n", (int)i, dataval_descs[i].init_val);
 	  data_vals.add_data_val(dataval_descs[i].id,
 				 dataval_descs[i].init_val, 
 				 dataval_descs[i].is_buffered,

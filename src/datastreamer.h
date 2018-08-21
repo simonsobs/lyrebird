@@ -7,6 +7,8 @@
 
 #include "json/json.h" 
 
+#include "visualelement.h"
+#include "equation.h"
 #include "datavals.h"
 #include "genericutils.h"
 
@@ -49,6 +51,11 @@ class DataStreamer{
 	       );
 
   virtual ~DataStreamer(){}
+
+  virtual int configure_datavals(std::vector<equation_desc> &eq_descs,
+                                 std::vector<vis_elem_repr> &vis_elems,
+                                 std::map<std::string, vis_elem_repr> &vis_templates)
+    { return 0; }
 
   void start_recording();
   void die_gracefully();
