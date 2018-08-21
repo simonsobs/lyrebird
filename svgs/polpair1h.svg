@@ -1,0 +1,5 @@
+
+<svg height="100px" width="100">
+  <polygon points="0,0 30,30 30,80  0,80" style="fill:white" />
+  <polygon points="0,0 -30,-30 -30,-80 0,-80" style="fill:white" />
+</svg> 
