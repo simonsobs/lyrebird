@@ -49,8 +49,8 @@ if args[0] == 'stream':
     rot = (((pi % 32 % 2)^(pi // 32 % 2)) + 2*ri) * np.pi/4
 
     cname = ['test_%04i' % i for i in idx]
-    equations = ['+ 1 c %s' % _c for _c in cname]
-    cmaps = [["bolo_cyan_cmap","bolo_green_cmap"][_ci] for _ci in ci]
+    equations = ['/ + 1 s %s 2' % _c for _c in cname]
+    cmaps = [["red_cmap","bolo_blue_cmap"][_ci] for _ci in ci]
 
     tplates = ['template_c%i_p0' % _ci for _ci in ci]
 

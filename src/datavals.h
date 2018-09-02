@@ -4,6 +4,20 @@
 #include <pthread.h>
 #include <unordered_map>
 
+// DataVals is constructed and populated as follows:
+//
+// 1. Instantiate with n_vals set to the number of channels you know
+// you will need.
+//
+// 2. Call register_data_source(n_vals), as many times as necessary,
+// to increase the channel count.
+//
+// 3. Call initialize() to allocate the storage.  After this, you
+// cannot increase the channel count.
+//
+// 4. Call add_data_val(...), providing details (such as name) of each
+// channel.
+//
 
 struct dataval_desc{
   std::string id;
@@ -19,9 +33,9 @@ public:
 	DataVals(int n_vals, int buffer_size);
 	~DataVals();
 	
+	void register_data_source(int n_vals);
 	
 	void initialize();
-	void register_data_source(int n_vals);
 	
 	//get the index of a variable with name id
 	// if not found returns -1

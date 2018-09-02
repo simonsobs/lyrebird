@@ -275,10 +275,11 @@ int main(int argc, char * args[])
 
   //create all the data streamers which write to the data vals
 
-  DataVals data_vals(dataval_descs.size() + 1, dv_buffer_size);
-  vector<std::shared_ptr< DataStreamer> >data_streamers;
+  DataVals data_vals(0, dv_buffer_size);
+  data_vals.register_data_source(dataval_descs.size());
 
   log_debug("creating data_streamers");
+  vector<std::shared_ptr<DataStreamer>>data_streamers;
   for (size_t i = 0; i < datastream_descs.size(); i++){
 	  std::shared_ptr< DataStreamer> ds_tmp  = NULL;
 	  ds_tmp = build_data_streamer(datastream_descs[i], &data_vals);
@@ -292,6 +293,7 @@ int main(int argc, char * args[])
       data_vals.register_data_source(chan_count);
   }
 
+  // Note that initialize() finalizes the channel count.
   data_vals.initialize();
 
   // Register the non-datastreamed datavals.

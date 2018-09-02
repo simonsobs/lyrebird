@@ -21,22 +21,14 @@ SDStreamer::SDStreamer(Json::Value desc,
     streamer_type_ = desc["streamer_type"].asInt();
 
     log_debug("streamer type %d", streamer_type_);
-
-    dv->register_data_source(get_num_elements());
 }
 
 void SDStreamer::initialize() {
     std::cout<<"Init SDStreamer"<<std::endl;
-    // s_path_inds = std::vector<int>(get_num_elements());
     for (auto n: chan_names)
         s_path_inds.push_back(data_vals->add_data_val(n, 0, true, 0));
-    
-    // for (int i=0; i < get_num_elements(); i++) {
-    //     // char name[16] = "";
-    //     // sprintf(name, "test_%04i", i);
-    //     s_path_inds[i] = data_vals->add_data_val(name, 0, true, 0);
-        //s_path_inds[i] = data_vals->add_data_val(name, 0, false, 0);
 }
+
 void SDStreamer::uninitialize() {
     std::cout<<"Uninit SDStreamer"<<std::endl;
 }
@@ -107,19 +99,12 @@ int SDStreamer::configure_datavals(
 void SDStreamer::update_values(int ind) {
 
     G3FramePtr frame = get_frame(frame_grabbing_function_, reader_str);
-    
-    if (frame->type == G3Frame::Wiring){
-        data_vals->update_val(s_path_inds[0], 12.);
-    } else if (frame->type == G3Frame::Scan){
-        // val += 0.5;
-        // for (int i=0; i<get_num_elements(); i++)
-        //     data_vals->update_val(s_path_inds[i], val * (1 - 2 * (i%2)));
+
+    // We only expect to find data in Scan frames.
+    if (frame->type == G3Frame::Scan){
         G3VectorDoubleConstPtr z = frame->Get<G3VectorDouble>("data");
         for (int i=0; i<(int)z->size() && i < get_num_elements();  i++)
             data_vals->update_val(s_path_inds[i], z->at(i));
-                                   
-    } else if (frame->type == G3Frame::Timepoint){
-
     } else if (frame->type == G3Frame::EndProcessing) {
         for (int i=0; i<get_num_elements(); i++)
             data_vals->update_val(s_path_inds[i], 0.);
@@ -128,5 +113,5 @@ void SDStreamer::update_values(int ind) {
 }
 
 int SDStreamer::get_num_elements(){
-    return 4096;
+    return chan_names.size();
 }
