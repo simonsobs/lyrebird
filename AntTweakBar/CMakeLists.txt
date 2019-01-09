@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(AntTweakBar)
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+# set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
+# set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 include_directories(include)
 ################### Build the library ###################
 if (APPLE)
@@ -31,5 +31,5 @@ src/TwEventSFML.cpp
 src/TwEventX11.c
 )
 add_definitions(-Wall -Wno-unused -Wno-tautological-compare -fno-strict-aliasing -D_${platform} -D__PLACEMENT_NEW_INLINE)
-include_directories(${CMAKE_SOURCE_DIR}/../include ${X11_INCLUDE_DIR})
-add_library(AntTweakBar ${ANTWB_SOURCES})
+#include_directories(${CMAKE_SOURCE_DIR}/../include ${X11_INCLUDE_DIR})
+add_library(AntTweakBar SHARED ${ANTWB_SOURCES})
