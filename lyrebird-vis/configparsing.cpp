@@ -48,12 +48,12 @@ bool parse_float_if_valid(float &dest, Json::Value &parent, string key, bool req
 {
     if (!parent.isMember(key)) {
         if (required)
-            log_fatal((key + " not found in visual_element\n").c_str());
+            log_fatal("'%s' not found in visual_element\n", key.c_str());
         return false;
     }
     if (!parent[key].isNumeric()) {
         if (required)
-            log_fatal((key + " valid numeric in visual_element\n").c_str());
+            log_fatal("'%s' not a valid numeric in visual_element\n", key.c_str());
         return false;
     }
     dest = parent[key].asFloat();
@@ -64,12 +64,12 @@ bool parse_int_if_valid(int &dest, Json::Value &parent, string key, bool require
 {
     if (!parent.isMember(key)) {
         if (required)
-            log_fatal((key + " not found in visual_element\n").c_str());
+            log_fatal("'%s' not found in visual_element\n", key.c_str());
         return false;
     }
     if (!parent[key].isInt()) {
         if (required)
-            log_fatal((key + " valid int in visual_element\n").c_str());
+            log_fatal("'%s' not a valid int in visual_element\n", key.c_str());
         return false;
     }
     dest = parent[key].asInt();
@@ -80,7 +80,7 @@ bool parse_string_if_valid(string &dest, Json::Value &parent, string key, bool r
 {
     if (!parent.isMember(key)) {
         if (required)
-            log_fatal((key + " not found in visual_element\n").c_str());
+            log_fatal("'%s' not found in visual_element\n", key.c_str());
         return false;
     }
     dest = parent[key].asString();

@@ -76,6 +76,11 @@ void SetRootLogger(L3LoggerPtr);
 
 std::string L3LoggingStringF(const char *format, ...)
     __attribute__((__format__ (__printf__, 1, 2)));
+
+// Note that the derived functions, such as log_fatal(...) expect a
+// string literal as the first argument.  So instead of
+// log_fatal(some_string.c_str()) you should use
+// log_fatal("%s", some_string.c_str()).
 #define L3_LOGGER(level, id, file, line, func, format, ...) \
     GetRootLogger()->Log(level, id, file, line, func, \
     L3LoggingStringF(format, ##__VA_ARGS__))
