@@ -33,21 +33,30 @@ void SDStreamer::uninitialize() {
     std::cout<<"Uninit SDStreamer"<<std::endl;
 }
 
-static
-G3FramePtr get_frame(G3ReaderPtr & fun, std::string reader_str){
+G3FramePtr SDStreamer::get_frame() {
+    //G3ReaderPtr & fun, std::string reader_str){
 
-	std::deque<G3FramePtr> out;
-	fun->Process(G3FramePtr(NULL), out);
+    std::deque<G3FramePtr> out;
+    frame_grabbing_function_->Process(G3FramePtr(NULL), out);
 	
-	if (out.size() == 0){
-		log_error("Lyrebird lost connection");
-		sleep(1);
-		try {
-			fun = G3ReaderPtr(new G3Reader(reader_str));
-		} catch (const std::exception&) {}
-	}
+    if (out.size() == 0){
+        log_error("Lyrebird lost connection");
+        sleep(1);
+        try {
+            frame_grabbing_function_ = G3ReaderPtr(new G3Reader(reader_str));
+        } catch (const std::exception&) {}
+    }
 	
-	return out.front();
+    return out.front();
+}
+
+static
+void *reader_thread_func(void *ds) {
+    auto sds = (SDStreamer*)ds;
+    while (true) {
+        G3FramePtr frame = sds->get_frame();
+        sds->frame_stream.push(frame);
+    }
 }
 
 int SDStreamer::configure_datavals(
@@ -56,7 +65,7 @@ int SDStreamer::configure_datavals(
         std::map<std::string, vis_elem_repr> &vis_templates)
 {
     cout << "Blocking to load config from stream..." << endl;
-    G3FramePtr frame = get_frame(frame_grabbing_function_, reader_str);
+    G3FramePtr frame = get_frame();
     
     if(frame->type == G3Frame::Scan) {
         // Check for config data?
@@ -92,14 +101,22 @@ int SDStreamer::configure_datavals(
             eq_descs.push_back(eqd);
             v.labels.push_back("label_" + n->at(i));
         }
+        if (pthread_create( &reader_thread, NULL, reader_thread_func, (void*)this)){
+            log_fatal("Could not spawn reader_thread.");
+        }
     }
     return chan_names.size();
 }
 
 void SDStreamer::update_values(int ind) {
 
-    G3FramePtr frame = get_frame(frame_grabbing_function_, reader_str);
-
+    // G3FramePtr frame = get_frame(frame_grabbing_function_, reader_str);
+    // Block for new frame to appear...
+    G3FramePtr frame = frame_stream.pop();
+    while (frame == nullptr) {
+        usleep(1000);
+        frame = frame_stream.pop();
+    }
     // We only expect to find data in Scan frames.
     if (frame->type == G3Frame::Scan){
         G3VectorDoubleConstPtr z = frame->Get<G3VectorDouble>("data");
@@ -114,4 +131,24 @@ void SDStreamer::update_values(int ind) {
 
 int SDStreamer::get_num_elements(){
     return chan_names.size();
+}
+
+
+// Implementation of SDFrameStream
+
+void SDFrameStream::push(G3FramePtr f) {
+    pthread_mutex_lock(&mutex_);
+    frame_queue.push_front(f);
+    pthread_mutex_unlock(&mutex_);
+}
+
+G3FramePtr SDFrameStream::pop() {
+    G3FramePtr f = nullptr;
+    pthread_mutex_lock(&mutex_);
+    if (!frame_queue.empty()) {
+        f = frame_queue.back();
+        frame_queue.pop_back();
+    }
+    pthread_mutex_unlock(&mutex_);
+    return f;
 }
