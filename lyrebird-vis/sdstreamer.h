@@ -2,6 +2,10 @@
 
 #include "datastreamer.h"
 #include <core/G3Reader.h>
+#include <core/G3TimeStamp.h>
+
+// SDFrameStream - helper class that caches frames and helps manage
+// their gradual release to the visualizer.
 
 class SDFrameStream {
 public:
@@ -9,9 +13,24 @@ public:
   void push(G3FramePtr f);
   G3FramePtr pop();
 
+  double get_display_delay();
+  G3Time get_display_time(int frame_index);
+
 private:
   pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
+  // The linear relation between timestamps in the frame stream and
+  // the visualizer local timestamps.
+  G3Time source_offset;
+  double source_period = -1.;
+  G3Time vis_offset;
+  double vis_period = -1.;
+  int next_frame_index = -1; // Index of next frame to be displayed.
+
+  // Lag drifting.
+  int n_lag = 0;
+  double lag_step = 0.;
+  double lag_thresh = -0.05;
 };
 
 

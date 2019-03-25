@@ -29,12 +29,20 @@ if args[0] == 'stream':
     import time
 
     counter = 0
+    cache = []
+    N_CACHE = 4  # For bundled release, set to > 1.
     def pacer(frame):
-        global counter
+        global counter, cache
         counter += 1
         if counter == -10:
             time.sleep(10)
         time.sleep(.1)
+        cache.append(frame)
+        frame = []
+        if counter % N_CACHE == 0:
+            output = [c for c in cache]
+            cache = []
+            return output
         return frame
 
     N_CHROIC = 2
@@ -72,7 +80,8 @@ if args[0] == 'stream':
         else:
             data = np.random.normal(size=len(data))
             out['data'] = core.G3VectorDouble(data)
-
+            out['timestamp'] = core.G3Time(time.time() * core.G3Units.seconds)
+            out['freq_hz'] = 1.
         return out
 
     pipe = core.G3Pipeline()

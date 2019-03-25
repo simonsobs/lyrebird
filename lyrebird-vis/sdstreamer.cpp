@@ -1,5 +1,6 @@
 #include "sdstreamer.h"
 #include <iostream>
+#include <sys/time.h>
 
 #include <G3Frame.h>
 #include <G3Pipeline.h>
@@ -108,15 +109,19 @@ int SDStreamer::configure_datavals(
     return chan_names.size();
 }
 
-void SDStreamer::update_values(int ind) {
+void SDStreamer::update_values(int ind)
+{
+    // Is it time to display a frame?
+    double sleep_time = frame_stream.get_display_delay();
+    if (sleep_time > 1e-3)
+        return;
+    if (sleep_time > 1e-6)
+        usleep(int(sleep_time * 1e6));
 
-    // G3FramePtr frame = get_frame(frame_grabbing_function_, reader_str);
-    // Block for new frame to appear...
     G3FramePtr frame = frame_stream.pop();
-    while (frame == nullptr) {
-        usleep(1000);
-        frame = frame_stream.pop();
-    }
+    if (frame == nullptr)
+        return;
+
     // We only expect to find data in Scan frames.
     if (frame->type == G3Frame::Scan){
         G3VectorDoubleConstPtr z = frame->Get<G3VectorDouble>("data");
@@ -134,21 +139,104 @@ int SDStreamer::get_num_elements(){
 }
 
 
-// Implementation of SDFrameStream
+/** SDFrameStream
+ *
+ * The SDFrameStream handles the buffering of frames and the timing of
+ * their release to the visualizer.  This is threaded; access to
+ * frame_queue is protected by frame_mutex.
+ */
 
+/**
+ * Push a frame into the queue front.  The frame timestamp is examined
+ * and compared to the projected display time -- this is used to set
+ * the right lag parameter so the display stream is smooth.
+ */
 void SDFrameStream::push(G3FramePtr f) {
     pthread_mutex_lock(&mutex_);
     frame_queue.push_front(f);
+    // Update the timelines.
+    G3Time t = *f->Get<G3Time>("timestamp");
+    // cout << "Frame " << t << " recd at " << G3Time::Now() << endl;
+    // cout << "  current offset is " <<
+    //     double(vis_offset - source_offset) / G3Units::s << endl;
+    if (next_frame_index == -1) {
+        next_frame_index = 0;
+        source_offset = t;
+        vis_offset = G3Time::Now();
+    } else if (source_period < 0) {
+        source_period = double(t - source_offset) / G3Units::s;
+        vis_period = source_period;
+        cout << "Setting source_period and vis_period to: " << source_period << endl;
+    } else {
+        // When will this frame be displayed, and how does that
+        // compare to now?
+        double delta = double(
+            get_display_time(next_frame_index + frame_queue.size() - 1)
+            - G3Time::Now()) / G3Units::s;
+        if (delta < lag_thresh) {
+            // This will be a noticeably late delivery.  Schedule a
+            // slowdown... or make sure the extant one is sufficient.
+            if (frame_queue.size() * lag_step > delta) {
+                // Recompute it.
+                n_lag = frame_queue.size();
+                lag_step = delta / n_lag;
+                cout << "Adding latency -- " << n_lag << " x "
+                     << lag_step << " secs." << endl;
+            }
+        }
+    }
+    if (n_lag > 0) {
+        vis_offset -= long(lag_step*G3Units::s);
+        n_lag--;
+    }
     pthread_mutex_unlock(&mutex_);
 }
 
+/**
+ * Pop a frame from the queue back, if one is available, and return
+ * it.  Otherwise return nullptr.
+ */
 G3FramePtr SDFrameStream::pop() {
     G3FramePtr f = nullptr;
     pthread_mutex_lock(&mutex_);
     if (!frame_queue.empty()) {
         f = frame_queue.back();
         frame_queue.pop_back();
+        next_frame_index++;
     }
     pthread_mutex_unlock(&mutex_);
     return f;
+}
+
+/**
+ * Returns the time at which frame frame_index would be displayed, in
+ * the current model.  Only valid if vis_offset and vis_period have
+ * been properly defined.
+ */
+
+G3Time SDFrameStream::get_display_time(int frame_index)
+{
+    return vis_offset + long(frame_index * vis_period * G3Units::s);
+}
+
+/**
+ * Returns the amount of time, in seconds, to wait before showing the
+ * next frame.  If this information cannot be computed, some absurdly
+ * large number (such as 1000) is returned.  The code that passes
+ * frames to the visualizer should call time_to_next_show() and then
+ * decides whether to serve the frame, busy wait first, sleep a little
+ * first, or go do something else and come back later.
+ */
+double SDFrameStream::get_display_delay()
+{
+    if (next_frame_index < 0) {
+        // No data yet.
+        return 1000;
+    }
+    if (next_frame_index == 0) {
+        // Sure, display it.
+        return 0.;
+    }
+    return double(get_display_time(next_frame_index) - G3Time::Now()) /
+        G3Units::s;
 }
