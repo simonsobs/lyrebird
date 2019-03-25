@@ -71,6 +71,11 @@ class DataStreamer{
   //ind is the index if it is a REQUEST_HISTORY type
   virtual void update_values(int ind){std::cout<<"update DS"<<std::endl;}
   virtual int get_num_elements(){assert(0);return -1;}
+
+  // Special features.
+  bool has_lag = false;
+  float lag_s = 0;
+
  protected:
   virtual void initialize(){std::cout<<"init DS"<<std::endl;}
   virtual void uninitialize(){std::cout<<"uninit DS"<<std::endl;}

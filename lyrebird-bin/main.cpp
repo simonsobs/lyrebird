@@ -468,6 +468,11 @@ int main(int argc, char * args[])
 
     TwAddSeparator(main_bar, "pasue_sep", NULL);
 
+    float lag_tracker = 0.;
+    TwAddVarRO(main_bar, "Lag (s)", TW_TYPE_FLOAT, &lag_tracker,
+               "group='Playback Mgmt' step-0.01");
+    TwAddSeparator(main_bar, "bar", NULL);
+
     log_debug("displayed eqs");
 
     unsigned int displayed_eq = 0;
@@ -584,6 +589,13 @@ int main(int argc, char * args[])
                     display_buffer_size);
         }
 	  
+        //Update some display variables.
+        lag_tracker = 0;
+        for (auto ds : data_streamers) {
+            if (ds->has_lag)
+                lag_tracker = (ds->lag_s > lag_tracker ? ds->lag_s : lag_tracker);
+        }
+
         //other things
 	  
         highlight.check_socket();

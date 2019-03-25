@@ -15,6 +15,7 @@ public:
 
   double get_display_delay();
   G3Time get_display_time(int frame_index);
+  double get_lag_s();
 
 private:
   pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;

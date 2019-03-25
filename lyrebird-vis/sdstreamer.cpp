@@ -20,7 +20,7 @@ SDStreamer::SDStreamer(Json::Value desc,
     hostname_ = desc["network_streamer_hostname"].asString();
     port_ = desc["network_streamer_port"].asInt();
     streamer_type_ = desc["streamer_type"].asInt();
-
+    has_lag = true;
     log_debug("streamer type %d", streamer_type_);
 }
 
@@ -132,6 +132,9 @@ void SDStreamer::update_values(int ind)
             data_vals->update_val(s_path_inds[i], 0.);
         log_error("Lost connection to server ep");
     }
+
+    // Update latency param.
+    lag_s = frame_stream.get_lag_s();
 }
 
 int SDStreamer::get_num_elements(){
@@ -239,4 +242,13 @@ double SDFrameStream::get_display_delay()
     }
     return double(get_display_time(next_frame_index) - G3Time::Now()) /
         G3Units::s;
+}
+
+/**
+ * Returns the latency parameter (offset between visualization stream
+ * and frame stream), in seconds.  Positive for causal relationships.
+ */
+double SDFrameStream::get_lag_s()
+{
+    return double(vis_offset - source_offset) / G3Units::s;
 }
