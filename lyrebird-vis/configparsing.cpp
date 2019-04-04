@@ -352,7 +352,7 @@ void parse_config_file(string in_file,
               Json::Value v = vplates_JSON[i];
               string vname = v["name"].asString();
               if (vis_templates.count(vname) > 0)
-                  log_fatal(("Multiple definitions of visual_element_template " + vname).c_str());
+                  log_fatal("Multiple definitions of visual_element_template %s",  vname.c_str());
               parse_vis_elem_desc(v, vplate, false,
                                   vis_templates, num_layers);
               vis_templates[vname] = vplate;
