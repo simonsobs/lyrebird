@@ -66,13 +66,17 @@ int SDStreamer::configure_datavals(
         std::map<std::string, vis_elem_repr> &vis_templates)
 {
     cout << "Blocking to load config from stream..." << endl;
-    G3FramePtr frame = get_frame();
-    
-    if(frame->type == G3Frame::Scan) {
+    int retries = 5;
+    for (int retries = 5; retries > 0; retries--) {
+        G3FramePtr frame = get_frame();
+        if(frame->type != G3Frame::Scan)
+            continue;
+
         // Check for config data?
         if (!frame->Has("equations"))
-            return 0;
-        cout << "config frame received." << endl;
+            continue;
+
+        cout << "config frame received, probably." << endl;
         // Load visual elements.
         G3VectorDoubleConstPtr x = frame->Get<G3VectorDouble>("x");
         G3VectorDoubleConstPtr y = frame->Get<G3VectorDouble>("y");
@@ -105,8 +109,11 @@ int SDStreamer::configure_datavals(
         if (pthread_create( &reader_thread, NULL, reader_thread_func, (void*)this)){
             log_fatal("Could not spawn reader_thread.");
         }
+        return chan_names.size();
     }
-    return chan_names.size();
+    log_error("Failed to decode a config frame.");
+
+    return 0;
 }
 
 void SDStreamer::update_values(int ind)
