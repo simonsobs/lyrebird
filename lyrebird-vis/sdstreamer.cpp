@@ -165,39 +165,31 @@ void SDFrameStream::push(G3FramePtr f) {
     pthread_mutex_lock(&mutex_);
     frame_queue.push_front(f);
     // Update the timelines.
-    G3Time t = *f->Get<G3Time>("timestamp");
-    // cout << "Frame " << t << " recd at " << G3Time::Now() << endl;
-    // cout << "  current offset is " <<
-    //     double(vis_offset - source_offset) / G3Units::s << endl;
-    if (next_frame_index == -1) {
-        next_frame_index = 0;
-        source_offset = t;
-        vis_offset = G3Time::Now();
-    } else if (source_period < 0) {
-        source_period = double(t - source_offset) / G3Units::s;
-        vis_period = source_period;
-        cout << "Setting source_period and vis_period to: " << source_period << endl;
+    double frame_t = double(*f->Get<G3Time>("timestamp")) / G3Units::s;
+    double now = double(G3Time::Now()) / G3Units::s;
+
+    // Monitor the latency in case it can be improved.
+    if (reinit) {
+        // State machine reset... make a measurement.
+        vis_offset = now - frame_t;
+        mon_lag = 1000.;
+        mon_time0 = now;
+        reinit = 0;
     } else {
-        // When will this frame be displayed, and how does that
-        // compare to now?
-        double delta = double(
-            get_display_time(next_frame_index + frame_queue.size() - 1)
-            - G3Time::Now()) / G3Units::s;
-        if (delta < lag_thresh) {
-            // This will be a noticeably late delivery.  Schedule a
-            // slowdown... or make sure the extant one is sufficient.
-            if (frame_queue.size() * lag_step > delta) {
-                // Recompute it.
-                n_lag = frame_queue.size();
-                lag_step = delta / n_lag;
-                cout << "Adding latency -- " << n_lag << " x "
-                     << lag_step << " secs." << endl;
-            }
+        // If frames aren't coming in fast enough, increase the deliberate latency.
+        double t = get_display_time(f);
+        if (t - now < 0.1)
+            vis_offset += (now - t) * .9;
+        // If our current latency seems too large, adjust.
+        mon_lag = std::min(t - now, mon_lag);
+        if (now - mon_time0 > 5.) {
+            // Worst case not that bad?
+            if (mon_lag > 0.1)
+                vis_offset -= mon_lag*.9;
+            // Reset.
+            mon_lag = 1000;
+            mon_time0 = now;
         }
-    }
-    if (n_lag > 0) {
-        vis_offset -= long(lag_step*G3Units::s);
-        n_lag--;
     }
     pthread_mutex_unlock(&mutex_);
 }
@@ -212,21 +204,19 @@ G3FramePtr SDFrameStream::pop() {
     if (!frame_queue.empty()) {
         f = frame_queue.back();
         frame_queue.pop_back();
-        next_frame_index++;
     }
     pthread_mutex_unlock(&mutex_);
     return f;
 }
 
 /**
- * Returns the time at which frame frame_index would be displayed, in
- * the current model.  Only valid if vis_offset and vis_period have
- * been properly defined.
+ * Returns the time (double) at which frame f should be displayed.
+ * Frame better have a timestamp entry!
  */
 
-G3Time SDFrameStream::get_display_time(int frame_index)
-{
-    return vis_offset + long(frame_index * vis_period * G3Units::s);
+double SDFrameStream::get_display_time(G3FramePtr f) {
+    auto t = double(*f->Get<G3Time>("timestamp")) / G3Units::s;
+    return t + vis_offset;
 }
 
 /**
@@ -239,16 +229,18 @@ G3Time SDFrameStream::get_display_time(int frame_index)
  */
 double SDFrameStream::get_display_delay()
 {
-    if (next_frame_index < 0) {
-        // No data yet.
+    // Inspect next frame.
+    double t = 0;
+    pthread_mutex_lock(&mutex_);
+    if (!frame_queue.empty()) {
+        auto f = frame_queue.back();
+        t = get_display_time(f);//double(*f->Get<G3Time>("timestamp")) / G3Units::s;
+    }
+    pthread_mutex_unlock(&mutex_);
+
+    if (t == 0)
         return 1000;
-    }
-    if (next_frame_index == 0) {
-        // Sure, display it.
-        return 0.;
-    }
-    return double(get_display_time(next_frame_index) - G3Time::Now()) /
-        G3Units::s;
+    return t - double(G3Time::Now()) / G3Units::s;
 }
 
 /**
@@ -257,5 +249,5 @@ double SDFrameStream::get_display_delay()
  */
 double SDFrameStream::get_lag_s()
 {
-    return double(vis_offset - source_offset) / G3Units::s;
+    return vis_offset;
 }

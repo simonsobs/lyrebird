@@ -14,24 +14,22 @@ public:
   G3FramePtr pop();
 
   double get_display_delay();
-  G3Time get_display_time(int frame_index);
   double get_lag_s();
+  double get_display_time(G3FramePtr f);
 
 private:
   pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
-  // The linear relation between timestamps in the frame stream and
-  // the visualizer local timestamps.
-  G3Time source_offset;
-  double source_period = -1.;
-  G3Time vis_offset;
-  double vis_period = -1.;
-  int next_frame_index = -1; // Index of next frame to be displayed.
+  // Trigger initialization of vis_offset on first frame.
+  int reinit = 1;
 
-  // Lag drifting.
-  int n_lag = 0;
-  double lag_step = 0.;
-  double lag_thresh = -0.05;
+  // The frame will be released for display at frame["timestamp"] +
+  // vis_offset.  Don't assume this is positive.
+  double vis_offset = 0;
+
+  // For correcting when voluntary latency is to high...
+  double mon_lag;   // worst case since mon_time0.
+  double mon_time0; // timestamp.
 };
 
 
