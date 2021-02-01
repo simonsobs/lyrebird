@@ -69,7 +69,7 @@ int SDStreamer::configure_datavals(
     int retries = 5;
     for (int retries = 5; retries > 0; retries--) {
         G3FramePtr frame = get_frame();
-        if(frame->type != G3Frame::Scan)
+        if(frame->type != G3Frame::Wiring)
             continue;
 
         // Check for config data?
