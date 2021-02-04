@@ -56,6 +56,8 @@ void *reader_thread_func(void *ds) {
     auto sds = (SDStreamer*)ds;
     while (true) {
         G3FramePtr frame = sds->get_frame();
+        if(frame->type == G3Frame::PipelineInfo)
+            continue;
         sds->frame_stream.push(frame);
     }
 }
@@ -69,7 +71,7 @@ int SDStreamer::configure_datavals(
     int retries = 5;
     for (int retries = 5; retries > 0; retries--) {
         G3FramePtr frame = get_frame();
-        if(frame->type != G3Frame::Scan)
+        if(frame->type != G3Frame::Wiring)
             continue;
 
         // Check for config data?

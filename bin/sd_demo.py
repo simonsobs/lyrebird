@@ -6,12 +6,11 @@ SDDataSource demo tool.
 Invoke as
     ./sd_demo.py config
 
-Then run lyrebird:
-    ./lyrebird sd_demo.json
-
 Then start the data stream:
     ./sd_demo.py stream
 
+Then run lyrebird:
+    ./lyrebird sd_demo.json
 """
 
 import optparse as o
@@ -28,18 +27,18 @@ if args[0] == 'stream':
     import numpy as np
     import time
 
-    counter = 0
     cache = []
+    cache_count = 0
     N_CACHE = 4  # For bundled release, set to > 1.
     def pacer(frame):
-        global counter, cache
-        counter += 1
+        global cache_count, cache
+        cache_count += 1
         if counter == -10:
             time.sleep(10)
         time.sleep(.1)
         cache.append(frame)
         frame = []
-        if counter % N_CACHE == 0:
+        if cache_count % N_CACHE == 0:
             output = [c for c in cache]
             cache = []
             return output
@@ -64,11 +63,12 @@ if args[0] == 'stream':
 
     data = np.zeros(n)
 
+    counter = 0
     def gen(frame):
         global counter, data
         out = core.G3Frame()
-        out.type = core.G3FrameType.Scan  # is this allowed?
         if counter == 0:
+            out.type = core.G3FrameType.Wiring
             # Load up the data description.
             out['x'] = core.G3VectorDouble(x)
             out['y'] = core.G3VectorDouble(y)
@@ -78,21 +78,22 @@ if args[0] == 'stream':
             out['cmaps'] = core.G3VectorString(cmaps)
             out['templates'] = core.G3VectorString(tplates)
         else:
+            out.type = core.G3FrameType.Scan
             data = np.random.normal(size=len(data))
             out['data'] = core.G3VectorDouble(data)
             out['timestamp'] = core.G3Time(time.time() * core.G3Units.seconds)
             out['freq_hz'] = 1.
+        counter += 1
         return out
 
     pipe = core.G3Pipeline()
     pipe.Add(gen)
     pipe.Add(core.Dump)
     pipe.Add(pacer)
-    pipe.Add(core.G3NetworkSender, hostname='localhost', port=8675, max_queue_size=1000)
+    pipe.Add(core.G3NetworkSender, hostname='*', port=8675, max_queue_size=1000)
     pipe.Run(profile=True)
 
 if args[0] == 'config':
-
     from configutils import config_constructor as cc
 
     config_dic = {}
@@ -137,7 +138,7 @@ if args[0] == 'config':
     config_dic['external_commands_id_list'] = ['SAY HALLO', "SAY GOODBYE"]
 
     cc.addDataSource(config_dic, "sd_streamer", "sd_streamer", {
-        'network_streamer_hostname': '*',
+        'network_streamer_hostname': 'localhost',
         'network_streamer_port': 8675,
         })
     cc.storeConfigFile(config_dic, opts.config_file)
