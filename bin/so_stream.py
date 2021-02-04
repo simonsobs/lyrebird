@@ -1,3 +1,42 @@
+"""
+This is a module for the Simons Observatory SMuRF Readout. It connects to a
+smurf-streamer datastream, and converts incoming data to the format that is
+accepted by the lyrebird sdstreamer.
+
+This can run with the following focalplane layots:
+
+Grid:
+
+    In this mode of operation, 4096 channels are visualized as 1024 pixels
+    arranged in a 32x32 grid, with each pixel displaying data from 4 smurf
+    channels.
+
+Wafer:
+
+    In this mode, channels are arranged based on detector information provided
+    in a wafer input file. To generate a wafer-file, you can start out by
+    generating a hardware config file using the `so_hardware_sim` tool in
+    sodetlib. This will create a `hardware.toml`  file containing hardware and
+    detector configuration info for Simons Observatory. You can extract a
+    particular wafer with the `extract_wafer_dets.py` script by running:
+
+        $ python3 extract_wafer_dets.py hardware.toml w00
+
+Steps to run:
+1.  create the sd_demo.json file by running:
+        `python3 sd_demo.py config`
+2.  Make sure a smurf-streamer is running on port <src> or make sure an ssh
+    tunnel is open from the smurf-streamer to the <src> port on the localhost.
+3.  Start the connector. To run in grid mode, run:
+        `python3 so_stream.py`
+    and to run in wafer mode:
+        `python3 so_stream.py --layout wafer --wafer-file <path_to_wafer_file>`
+    the <src> and <dest> port can be configured with command line argsl
+4.  Start the lyrebird visualizer by running on the vnc:
+        `lyrebird sd_demo.json`
+"""
+
+
 import argparse
 import numpy as np
 from spt3g import core
@@ -164,7 +203,7 @@ class SmurfVis:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--src', default='tcp://localhost:4532',
-                        help="Address of incoming G3Frames")
+                        help="Address of incoming G3Frames.")
     parser.add_argument('--dest', type=int, default=8675,
                         help="Port to server lyrebird frames")
     parser.add_argument('--target-rate', '-t', type=float, default=5)

@@ -56,6 +56,8 @@ void *reader_thread_func(void *ds) {
     auto sds = (SDStreamer*)ds;
     while (true) {
         G3FramePtr frame = sds->get_frame();
+        if(frame->type == G3Frame::PipelineInfo)
+            continue;
         sds->frame_stream.push(frame);
     }
 }
